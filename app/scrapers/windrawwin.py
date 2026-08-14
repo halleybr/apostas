@@ -75,6 +75,21 @@ def _stake_conf(text: str) -> float:
 
 def scrape() -> dict:
     """Return {'matches': [...], 'acca': {...}|None, 'url': ...}"""
+    for attempt in range(2):
+        result = _scrape_once()
+        if result["matches"] or attempt > 0:
+            if not result["matches"] and result.get("status") != "error":
+                result["status"] = "parcial"
+                result["note"] = "Windrawwin não retornou previsões (anti-bot/limite). As demais fontes seguem normais."
+            return result
+        import time as _time
+
+        _time.sleep(6)
+    return result
+
+
+def _scrape_once() -> dict:
+    """One parse pass; returns matches/acca or marks the outcome."""
     html = cached_fetch_text(URL, TTL)
     root = parse(html)
     matches: list[dict] = []
@@ -153,7 +168,10 @@ def scrape() -> dict:
                 resolved.append({"ref": leg})
         acca["legs"] = resolved
 
-    return {"matches": matches, "acca": acca, "url": URL}
+    status = "ok"
+    if not matches and not acca:
+        status = "parcial"
+    return {"matches": matches, "acca": acca, "url": URL, "status": status}
 
 
 def _parse_row(row: Node, league: str) -> dict | None:
