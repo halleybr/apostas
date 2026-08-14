@@ -36,7 +36,28 @@ jobs:
           python-version: "3.12"
 
       - name: Gerar snapshot estático (agrega fontes + YouTube + ao vivo)
-        run: python tools/build_static.py site
+        run: |
+          python - <<'PY'
+          import json, pathlib, time, subprocess, sys
+          # Re-tenta o build até o Windrawwin responder (ele aplica rate-limit
+          # por IP a acessos em rajada; o primeiro deploy do dia funcionou).
+          ok = False
+          for attempt in range(4):
+              subprocess.run([sys.executable, "tools/build_static.py", "site"], check=True)
+              html = pathlib.Path("site/index.html").read_text(encoding="utf-8")
+              start = html.index("window.__SNAPSHOT__ = ") + len("window.__SNAPSHOT__ = ")
+              end = html.index("</script>", start)
+              snap = json.loads(html[start:end].rstrip().rstrip(";"))
+              ww = (snap.get("predictions") or {}).get("sources", {}).get("windrawwin", {})
+              status = ww.get("status", "error")
+              print(f"tentativa {attempt + 1}: windrawwin={status}")
+              if status == "ok":
+                  ok = True
+                  break
+              time.sleep(45)
+          if not ok:
+              print("Aviso: Windrawwin indisponível após retries — publicando com as demais fontes.")
+          PY
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
