@@ -86,6 +86,23 @@ preview.html              preview estático com um snapshot dos dados (abrir dir
 > rode o servidor, chame `/api/overview` e incorpore o JSON em `window.__SNAPSHOT__`
 > (o `public/app.js` já suporta esse modo).
 
+## GitHub Pages (versão estática, sem servidor)
+
+O repositório publica o site em **https://halleybr.github.io/apostas** via GitHub
+Actions: a cada push na `main` (e 6x por dia) o workflow
+`.github/workflows/pages.yml` roda a agregação real (todas as fontes + YouTube +
+ao vivo), gera um **snapshot** com `tools/build_static.py` e publica na Pages.
+
+O frontend detecta `window.__SNAPSHOT__` e renderiza direto do snapshot embutido —
+funciona 100% estático, sem servidor. Para gerar localmente:
+
+```bash
+python tools/build_static.py site
+# abre site/index.html no navegador (ou serve a pasta)
+```
+
+Requisito: nas configurações do repositório, Pages → Source → **GitHub Actions**.
+
 ## ⚠️ Aviso
 
 Este projeto é **apenas informativo**. Apostas envolvem risco financeiro — **18+**.

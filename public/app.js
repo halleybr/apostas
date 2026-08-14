@@ -510,7 +510,8 @@ async function loadLiveOnly() {
 function switchTab(name) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".tabpanel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
-  if (name === "live") {
+  if (name === "live" && !window.__SNAPSHOT__) {
+    // live polling only makes sense against a running server
     loadLiveOnly();
     if (!liveTimer) liveTimer = setInterval(loadLiveOnly, 45000);
   }

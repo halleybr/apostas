@@ -1,0 +1,51 @@
+name: Publicar site estático no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public/**"
+      - "app/**"
+      - "server.py"
+      - "tools/**"
+      - ".github/workflows/pages.yml"
+  schedule:
+    # 6x ao dia (a cada 4h) — mantém o snapshot de previsões atualizado
+    - cron: "17 0,4,8,12,16,20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Gerar snapshot estático (agrega fontes + YouTube + ao vivo)
+        run: python tools/build_static.py site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artefato
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
