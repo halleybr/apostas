@@ -91,6 +91,29 @@ function isFinished(m) {
   return false;
 }
 
+// The Pages snapshot is frozen between builds (up to 4h). A match that was
+// "live" when the snapshot was taken may have finished since — estimate the
+// current match minute from the snapshot age and hide finished ones.
+function liveSnapshotAgeMin() {
+  const ref = nvl(state && state.live && state.live.refreshed_at, null);
+  if (!ref) return 0;
+  const d = new Date(ref);
+  if (isNaN(d)) return 0;
+  return Math.max(0, (Date.now() - d.getTime()) / 60000);
+}
+
+function liveFinished(m, ageMin) {
+  if (isFinished(m)) return true;
+  const st = String(m.status || "").toUpperCase();
+  // only applies to matches reported as in progress
+  if (!m.isLive && !["1ST", "2ND", "HT", "ET", "PEN", "BT"].includes(st)) return false;
+  const minute = parseInt(m.minute || m.live && m.live.minute || "0", 10) || 0;
+  const est = minute + (ageMin || 0);
+  // ~90' match + interval + stoppage; extra time can reach ~120'
+  const limit = minute >= 90 ? 122 : 108;
+  return est > limit;
+}
+
 /* ---------------- renderers ---------------- */
 
 function renderMatchCard(m) {
@@ -114,7 +137,25 @@ function renderMatchCard(m) {
   const teams = el("div", "teams");
   const hs = m.scores ? `${esc(m.home)} <span class="score">${esc(m.scores.home)}</span>` : esc(m.home);
   const as = m.scores ? `<span class="score">${esc(m.scores.away)}</span> ${esc(m.away)}` : esc(m.away);
-  teams.innerHTML = `<span>${hs}</span><span>${as}</span>`;
+  // the match itself opens on bet365 when we have a deep link
+  if (m.bet365_url) {
+    const t1 = el("a", "team-link", "");
+    t1.innerHTML = `<span>${hs}</span>`;
+    t1.href = m.bet365_url;
+    t1.target = "_blank";
+    t1.rel = "noopener";
+    t1.title = "Abrir o jogo na Bet365";
+    const t2 = el("a", "team-link", "");
+    t2.innerHTML = `<span>${as}</span>`;
+    t2.href = m.bet365_url;
+    t2.target = "_blank";
+    t2.rel = "noopener";
+    t2.title = "Abrir o jogo na Bet365";
+    teams.appendChild(t1);
+    teams.appendChild(t2);
+  } else {
+    teams.innerHTML = `<span>${hs}</span><span>${as}</span>`;
+  }
   card.appendChild(teams);
 
   if (m.live && m.live.minute && m.isLive) {
@@ -176,8 +217,9 @@ function renderToday(data) {
   head.appendChild(el("h2", "", "📋 Previsões de hoje — melhores seleções por jogo"));
 
   const all = data.predictions.matches.filter((m) => !isFinished(m));
-  const live = all.filter((m) => m.isLive);
-  const upcoming = all.filter((m) => !m.isLive);
+  const ageMin = liveSnapshotAgeMin();
+  const live = all.filter((m) => m.isLive && !liveFinished(m, ageMin));
+  const upcoming = all.filter((m) => !m.isLive || liveFinished(m, ageMin));
   const sub = el("div", "sub",
     `Atualizado ${fmtWhen(data.predictions.generated_at)} · ${all.length} jogos (${live.length} ao vivo, ${upcoming.length} a iniciar) de ${data.predictions.matches.length} agregados`);
   head.appendChild(sub);
@@ -445,11 +487,18 @@ function renderLive(data) {
   const right = el("div", "panel");
   const head2 = el("div", "panel-head");
   head2.appendChild(el("h2", "", "🟢 Jogos ao vivo"));
-  head2.appendChild(el("div", "sub", `${live.live_matches ? live.live_matches.length : 0} partidas`));
+
+  const ageMin = liveSnapshotAgeMin();
+  const liveList = (live.live_matches || []).filter((m) => !liveFinished(m, ageMin));
+  const dropped = (live.live_matches || []).length - liveList.length;
+  head2.appendChild(el("div", "sub", `${liveList.length} partidas${dropped ? ` (${dropped} encerradas removidas)` : ""}`));
   right.appendChild(head2);
 
-  if (!live.live_matches || !live.live_matches.length) {
-    right.appendChild(el("div", "empty", "Nenhum jogo ao vivo agora."));
+  if (!liveList.length) {
+    const msg = live.live_matches && live.live_matches.length
+      ? `Nenhum jogo ao vivo agora — ${live.live_matches.length} partida(s) do snapshot já encerraram. Use o servidor local (python server.py) para dados em tempo real.`
+      : "Nenhum jogo ao vivo agora.";
+    right.appendChild(el("div", "empty", msg));
   } else {
     const tbl = el("table", "live-table");
     const thead = el("thead");
@@ -458,7 +507,7 @@ function renderLive(data) {
     thead.appendChild(trh);
     tbl.appendChild(thead);
     const tbody = el("tbody");
-    for (const m of live.live_matches) {
+    for (const m of liveList) {
       const tr = el("tr");
       tr.appendChild(el("td", "live", esc(String(m.minute || "")) + "'"));
       const name = el("td");

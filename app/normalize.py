@@ -12,6 +12,14 @@ STOP_WORDS = {
     "associação", "assoc", "union", "unión", "uniao", "uniao",
 }
 
+# Transliteration variants between sources (e.g. Robobet vs Windrawwin)
+# map token -> canonical token, applied after accent/strip normalization.
+SYNONYMS = {
+    "ettifaq": "ittifaq",   # Al Ettifaq (ww) == Al Ittifaq Dammam (robobet)
+    "nassr": "nasr",        # Al Nassr == Al Nasr
+    "ahly": "ahli",         # Al Ahly == Al Ahli
+}
+
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
 
@@ -27,6 +35,7 @@ def normalize_name(name: str) -> str:
     n = _strip_accents(name.lower())
     n = re.sub(r"[^a-z0-9 ]+", " ", n)
     tokens = [t for t in n.split() if t and t not in STOP_WORDS and len(t) > 1]
+    tokens = [SYNONYMS.get(t, t) for t in tokens]
     return " ".join(tokens)
 
 

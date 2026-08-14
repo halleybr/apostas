@@ -164,6 +164,8 @@ main { padding: 20px 24px 40px; max-width: 1280px; margin: 0 auto; }
 
 .teams { font-size: 15.5px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .teams .score { color: var(--green); margin-left: 8px; }
+.teams a.team-link { text-decoration: none; color: inherit; display: block; border-radius: 6px; padding: 2px 4px; margin: 0 -4px; }
+.teams a.team-link:hover { background: rgba(27, 176, 66, 0.12); color: #1bb042; }
 .mc-min { color: var(--red); font-weight: 700; font-size: 13px; }
 
 .sel-list { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
