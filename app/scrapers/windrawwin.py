@@ -90,9 +90,11 @@ def scrape() -> dict:
             "date": _clean_date(date_node.get_text()) if date_node else "",
             "odd": _dec(odd_node.get_text()) if odd_node else None,
             "legs": [],
+            "url": None,
         }
         if btn is not None:
             href = btn.get("href", "")
+            acca["url"] = href if href.startswith("http") else "https://www.windrawwin.com" + href
             m = re.search(r"[?&]p=([^&]+)", href)
             if m:
                 acca["legs"] = [seg.split("~")[0] for seg in m.group(1).split("|") if seg]
@@ -158,6 +160,7 @@ def _parse_row(row: Node, league: str) -> dict | None:
     odds: dict[str, float] = {}
     types: dict[str, str] = {}
     home = away = ""
+    ref1 = ref2 = oddsf = ""
     for a in row.find_all("a"):
         t = a.get("data-type")
         raw_odd = a.get("data-odds")
@@ -167,6 +170,10 @@ def _parse_row(row: Node, league: str) -> dict | None:
                 types[t] = a.get("data-home", "") + "|" + a.get("data-away", "")
             except ValueError:
                 pass
+            if not ref1 and a.get("data-ref1") and a.get("data-ref2"):
+                ref1 = a.get("data-ref1", "")
+                ref2 = a.get("data-ref2", "")
+                oddsf = a.get("data-oddsf", "")
     if not odds:
         return None
 
@@ -209,6 +216,17 @@ def _parse_row(row: Node, league: str) -> dict | None:
 
     l5h, l5a = _form_per_team(row)
 
+    # bet365 deep link (windrawwin official betslip proxy) + tip page
+    bet_url = None
+    if ref1 and ref2:
+        bet_url = f"https://www.windrawwin.com/bet365/betslip/?p={ref2}-{ref1}~{oddsf}"
+    tip_url = None
+    desk = row.find(class_="wtdesklnk")
+    if desk is not None:
+        href = desk.get("href")
+        if href:
+            tip_url = href if href.startswith("http") else "https://www.windrawwin.com" + href
+
     return {
         "home": home,
         "away": away,
@@ -218,6 +236,8 @@ def _parse_row(row: Node, league: str) -> dict | None:
         "form_home": l5h,
         "form_away": l5a,
         "stats": stats[:6],
+        "bet_url": bet_url,
+        "tip_url": tip_url,
         "source_url": URL,
     }
 

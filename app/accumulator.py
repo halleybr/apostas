@@ -53,6 +53,7 @@ def _pick_best_selection(match: dict) -> dict | None:
         "reliability": best["reliability"],
         "sources": best.get("sources", []),
         "is_pick": best.get("is_pick", False),
+        "bet365_url": match.get("bet365_url"),
     }
 
 

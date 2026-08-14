@@ -189,6 +189,25 @@ main { padding: 20px 24px 40px; max-width: 1280px; margin: 0 auto; }
 .reli-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; grid-column: 1 / -1; }
 .reli-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--green-dim), var(--green)); }
 
+.link-row { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+.link-btn {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  transition: border-color .15s, background .15s;
+}
+.link-btn:hover { border-color: var(--blue); background: var(--card2); }
+.link-btn.b365 { background: rgba(58, 175, 91, .18); border-color: rgba(58, 175, 91, .55); color: #7ce29b; }
+.link-btn.b365:hover { background: rgba(58, 175, 91, .32); }
+.link-btn.mini { font-size: 10.5px; padding: 3px 8px; margin-left: 6px; }
+.acca-leg .link-btn { display: block; margin-top: 6px; text-align: center; }
+
 .note-stats { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
 .note-stats li { list-style: none; margin-top: 2px; }
 

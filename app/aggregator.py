@@ -142,6 +142,8 @@ class MatchBuilder:
         self.scores: dict = {}
         self.live: dict = {}
         self.url: str | None = None
+        self.bet365_url: str | None = None
+        self.ww_tip_url: str | None = None
         self.sources_present: set[str] = set()
 
     def sel(self, code: str) -> Selection:
@@ -165,6 +167,8 @@ class MatchBuilder:
             "scores": self.scores,
             "live": self.live,
             "url": self.url,
+            "bet365_url": self.bet365_url,
+            "ww_tip_url": self.ww_tip_url,
             "sources": sorted(self.sources_present),
             "selections": sels,
         }
@@ -297,6 +301,10 @@ def _add_sokkerpro(match: MatchBuilder, sk: dict, key: str) -> None:
 
 def _add_windrawwin(match: MatchBuilder, ww: dict, key: str) -> None:
     _merge_into(match, ww, "windrawwin", key)
+    if not match.bet365_url and ww.get("bet_url"):
+        match.bet365_url = ww["bet_url"]
+    if not match.ww_tip_url and ww.get("tip_url"):
+        match.ww_tip_url = ww["tip_url"]
     odds = ww.get("odds") or {}
     for wt, code in WW_TYPE.items():
         o = odds.get(wt)

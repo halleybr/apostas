@@ -48,6 +48,14 @@ function fmtWhen(iso) {
   return fmtTime(iso);
 }
 
+function linkBtn(url, label, cls) {
+  const a = el("a", "link-btn " + (cls || ""), label);
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  return a;
+}
+
 function selReliabilityBar(pct) {
   const bar = el("div", "reli-bar");
   const fill = el("i");
@@ -148,6 +156,13 @@ function renderMatchCard(m) {
     card.appendChild(n);
   }
 
+  // links: bet365 + fallbacks (new tab)
+  const links = el("div", "link-row");
+  if (m.bet365_url) links.appendChild(linkBtn(m.bet365_url, "🎲 Abrir na Bet365", "b365"));
+  if (m.ww_tip_url) links.appendChild(linkBtn(m.ww_tip_url, "Dica Windrawwin", "ww"));
+  if (m.url) links.appendChild(linkBtn(m.url, "Jogo SokkerPro", "sk"));
+  if (links.children.length) card.appendChild(links);
+
   return card;
 }
 
@@ -209,6 +224,11 @@ function renderToday(data) {
     r1.appendChild(el("span", "", esc(ww.date || "")));
     r1.appendChild(el("span", "odd", "odd " + Number(ww.odd).toFixed(2)));
     w.appendChild(r1);
+    if (ww.url) {
+      const rl = el("div", "row");
+      rl.appendChild(linkBtn(ww.url, "🎲 Abrir na Bet365 (aposta completa)", "b365"));
+      w.appendChild(rl);
+    }
     (ww.legs || []).slice(0, 8).forEach((l) => {
       if (l.home) {
         const r = el("div", "row");
@@ -289,7 +309,10 @@ function renderAccaCombo(data, combo, acca) {
     left.appendChild(el("div", "meta",
       `${esc(l.league)} · ${fmtTime(l.start_time)} · fontes: ${(l.sources || []).map((s) => esc(SRC_NAMES[s] || s)).join(", ")}`));
     leg.appendChild(left);
-    leg.appendChild(el("span", "odd", Number(l.odd).toFixed(2)));
+    const legRight = el("div", "");
+    legRight.appendChild(el("span", "odd", Number(l.odd).toFixed(2)));
+    if (l.bet365_url) legRight.appendChild(linkBtn(l.bet365_url, "Bet365", "b365 mini"));
+    leg.appendChild(legRight);
     main.appendChild(leg);
   });
   wrap.appendChild(main);
