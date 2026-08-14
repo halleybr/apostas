@@ -30,6 +30,7 @@ const SRC_NAMES = {
 
 let state = null;
 let liveTimer = null;
+let momentsTimer = null;
 
 /* ---------------- helpers ---------------- */
 
@@ -539,11 +540,113 @@ function renderLive(data) {
   }
 }
 
+/* ---------------- melhores do momento ---------------- */
+
+function agitationBar(score) {
+  const bar = el("div", "reli-bar");
+  const fill = el("i");
+  fill.style.width = Math.max(3, Math.min(100, score)) + "%";
+  bar.appendChild(fill);
+  return bar;
+}
+
+function momentTip(t) {
+  const row = el("div", "moment-tip " + (t.nivel.includes("Quente") ? "hot" : ""));
+  row.appendChild(el("div", "mt-dica", esc(t.dica)));
+  const meta = el("div", "mt-meta");
+  meta.appendChild(el("span", "mt-nivel", esc(t.nivel)));
+  meta.appendChild(el("span", "", `probabilidade ${t.probabilidade}%`));
+  if (t.odd_sugerida) meta.appendChild(el("span", "", `odd sugerida ${Number(t.odd_sugerida).toFixed(2)}`));
+  row.appendChild(meta);
+  if (t.base) row.appendChild(el("div", "mt-base", esc(t.base)));
+  return row;
+}
+
+function renderMoments(data) {
+  const box = $("#momentsContent");
+  box.innerHTML = "";
+  const m = data.moments;
+  if (!m) {
+    box.appendChild(el("div", "empty", "Sem dados de momento — aguarde a próxima atualização."));
+    return;
+  }
+
+  const panel = el("div", "panel");
+  const head = el("div", "panel-head");
+  head.appendChild(el("h2", "", "⚡ Melhores do momento — jogos ao vivo agitados"));
+  head.appendChild(el("div", "sub",
+    `atualizado ${fmtWhen(m.refreshed_at)} · ${m.games.length} jogos com ritmo forte (pressão, chutes, escanteios, xG)`));
+  panel.appendChild(head);
+  box.appendChild(panel);
+
+  if (m.error) box.appendChild(el("div", "errorbox", `Erro no feed ao vivo: ${esc(m.error)}`));
+
+  const withTips = m.games.filter((g) => g.tips && g.tips.length);
+  const others = m.games.filter((g) => !g.tips || !g.tips.length);
+
+  const renderGame = (g) => {
+    const card = el("div", "match-card moment-card");
+    const top = el("div", "mc-top");
+    top.appendChild(el("span", "league", esc(g.league || "Futebol")));
+    const st = el("span", "statusline");
+    st.appendChild(el("span", "live-dot"));
+    st.appendChild(el("span", "", `ao vivo ${g.minute}'`));
+    top.appendChild(st);
+    card.appendChild(top);
+
+    const teams = el("div", "teams");
+    const nm = g.url ? el("a", "team-link", "") : el("span", "", "");
+    nm.innerHTML = `<span>${esc(g.home)} <span class="score">${esc(g.score_home)}</span></span>` +
+      `<span><span class="score">${esc(g.score_away)}</span> ${esc(g.away)}</span>`;
+    if (g.url) { nm.href = g.url; nm.target = "_blank"; nm.rel = "noopener"; nm.title = "Abrir no SokkerPro"; }
+    teams.appendChild(nm);
+    card.appendChild(teams);
+
+    const stat = el("ul", "note-stats moment-stats");
+    stat.appendChild(el("li", "", `🔄 Escanteios: ${nvl(g.corners.home, "-")} x ${nvl(g.corners.away, "-")}`));
+    stat.appendChild(el("li", "", `🎯 Chutes no gol: ${nvl(g.shots_on.home, "-")} x ${nvl(g.shots_on.away, "-")}`));
+    stat.appendChild(el("li", "", `⚽ xG: ${nvl(g.xg.home, "-")} x ${nvl(g.xg.away, "-")}`));
+    stat.appendChild(el("li", "", `🔥 Pressão: ${nvl(g.pressao.home, "-")} x ${nvl(g.pressao.away, "-")} ataques perigosos`));
+    if (g.possession && (g.possession.home != null || g.possession.away != null)) {
+      stat.appendChild(el("li", "", `🧲 Posse: ${nvl(g.possession.home, "-")}% x ${nvl(g.possession.away, "-")}%`));
+    }
+    card.appendChild(stat);
+
+    const ag = el("div", "moment-agitation");
+    ag.appendChild(el("span", "", `Agitação ${g.agitation.score}/100`));
+    ag.appendChild(agitationBar(g.agitation.score));
+    card.appendChild(ag);
+
+    if (g.tips && g.tips.length) {
+      const tipsBox = el("div", "moment-tips");
+      tipsBox.appendChild(el("div", "mt-title", "💡 Dicas de momento"));
+      g.tips.slice(0, 3).forEach((t) => tipsBox.appendChild(momentTip(t)));
+      card.appendChild(tipsBox);
+    }
+    return card;
+  };
+
+  if (withTips.length) {
+    const g1 = el("div", "match-grid");
+    withTips.slice(0, 9).forEach((g) => g1.appendChild(renderGame(g)));
+    box.appendChild(g1);
+  }
+  if (others.length) {
+    const g2 = el("div", "match-grid");
+    others.slice(0, 6).forEach((g) => g2.appendChild(renderGame(g)));
+    box.appendChild(g2);
+  }
+  if (!m.games.length) {
+    box.appendChild(el("div", "empty", "Nenhum jogo agitado no momento. Os jogos aparecem quando há pressão, chutes e escanteios em andamento."));
+  }
+}
+
 /* ---------------- main ---------------- */
 
 function renderAll() {
   if (!state) return;
   renderToday(state);
+  renderMoments(state);
   renderAcca(state);
   renderYoutube(state);
   renderLive(state);
@@ -596,6 +699,22 @@ function switchTab(name) {
     loadLiveOnly();
     if (!liveTimer) liveTimer = setInterval(loadLiveOnly, 45000);
   }
+  if (name === "moments" && !window.__SNAPSHOT__) {
+    loadMomentsOnly();
+    if (!momentsTimer) momentsTimer = setInterval(loadMomentsOnly, 60000);
+  }
+}
+
+async function loadMomentsOnly() {
+  try {
+    const res = await fetch("/api/moments", { cache: "no-store" });
+    if (!res.ok) return;
+    const moments = await res.json();
+    if (state) {
+      state.moments = moments;
+      renderMoments(state);
+    }
+  } catch (e) { /* silencioso */ }
 }
 
 document.querySelectorAll(".tab").forEach((t) => {

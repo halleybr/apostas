@@ -43,6 +43,7 @@ Abra **http://127.0.0.1:8000** no navegador.
 | `GET /api/accumulator` | Acumuladora recomendada (3 variantes) + alternativas + histórico Robobet |
 | `GET /api/youtube` | Vídeos de dicas de apostas do dia |
 | `GET /api/live` | Jogos ao vivo + sinais (gol, escanteio, ritmo, entradas) |
+| `GET /api/moments` | Melhores do momento: jogos ao vivo agitados + dicas de entrada (mais escanteio/gol, BTTS, over) |
 
 Dados são cacheados em memória (previsões ~5 min, YouTube ~20 min, ao vivo ~45 s).
 
@@ -59,6 +60,21 @@ Dados são cacheados em memória (previsões ~5 min, YouTube ~20 min, ao vivo ~4
    - **Mais confiável** — maior confiabilidade;
    - **Equilibrada** — melhor relação confiabilidade × uso da odd;
    - **Maior odd (≤ 4.00)** — odd combinada mais alta ainda confiável.
+
+## Melhores do momento
+
+A aba **⚡ Melhores do Momento** analisa os jogos ao vivo do SokkerPro em tempo real
+(intervalo ~60 s) e ranqueia os mais **agitados**: pressão (ataques perigosos), chutes a
+gol, escanteios, gols e xG acumulado. Para os jogos em ritmo forte, gera **dicas de
+aposta de momento**:
+
+- 🚩 **Mais 1 escanteio até o fim** — ritmo de cantos alto (projeção ≥ 7.5/jogo);
+- ⚽ **Mais 1 gol no jogo** — ritmo de gols ou xG restante alto;
+- 🤝 **Ambos marcam** — os dois times com xG vivo e finalizações;
+- 📈 **Total over 2.5** — jogo aberto com xG restante alto.
+
+Cada dica traz probabilidade heurística e odd sugerida, com o placar, escanteios,
+chutes, xG e pressão ao vivo de cada jogo.
 
 ## Sinais ao vivo
 
@@ -81,6 +97,7 @@ app/aggregator.py         unificação das fontes + confiabilidade
 app/accumulator.py        montagem da acumuladora (≤3 jogos, odd ≤4.00)
 app/youtube.py            busca de dicas no YouTube
 app/live.py               monitor ao vivo + sinais
+app/moments.py            melhores do momento: análise de jogos ao vivo agitados + dicas de entrada
 public/                   frontend (HTML/CSS/JS, pt-BR)
 preview.html              preview estático com um snapshot dos dados (abrir direto no navegador)
 ```

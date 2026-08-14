@@ -64,6 +64,7 @@ def build(out_dir: Path, host: str = "127.0.0.1", port: int = 8141) -> dict:
         "acca_odd": data["accumulator"]["recommended"]["odd"] if data["accumulator"]["recommended"] else None,
         "youtube_videos": sum(len(g["videos"]) for g in data["youtube"]["groups"]),
         "live_matches": len(data["live"]["live_matches"]),
+        "moment_games": len(data.get("moments", {}).get("games", [])),
         "generated_at": data["predictions"]["generated_at"],
     }
 

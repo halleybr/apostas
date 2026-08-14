@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 from app import accumulator as acc_mod
-from app import aggregator, live as live_mod, youtube
+from app import aggregator, live as live_mod, moments as moments_mod, youtube
 
 PORT = int(os.environ.get("PORT", "8000"))
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -115,15 +115,19 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(_youtube())
             elif route == "/api/live":
                 self._send_json(live_mod.get_live())
+            elif route == "/api/moments":
+                self._send_json(moments_mod.get_moments())
             elif route == "/api/overview":
                 acca = _accumulator()
                 live = live_mod.get_live()
                 yt = _youtube()
+                moments = moments_mod.get_moments()
                 self._send_json({
                     "predictions": acca["aggregated"],
                     "accumulator": acca["accumulator"],
                     "youtube": yt,
                     "live": live,
+                    "moments": moments,
                 })
             elif route == "/" or route == "/index.html":
                 self._send_file("index.html")
