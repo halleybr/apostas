@@ -75,17 +75,24 @@ def _stake_conf(text: str) -> float:
 
 def scrape() -> dict:
     """Return {'matches': [...], 'acca': {...}|None, 'url': ...}"""
-    for attempt in range(2):
-        result = _scrape_once()
-        if result["matches"] or attempt > 0:
-            if not result["matches"] and result.get("status") != "error":
+    import time as _time
+    from app.fetch import FetchError
+
+    last_error: str | None = None
+    for attempt in range(3):
+        try:
+            result = _scrape_once()
+            if result["matches"]:
+                return result
+            if attempt >= 2:
                 result["status"] = "parcial"
                 result["note"] = "Windrawwin não retornou previsões (anti-bot/limite). As demais fontes seguem normais."
-            return result
-        import time as _time
-
-        _time.sleep(6)
-    return result
+                return result
+            last_error = None
+        except (FetchError, Exception) as exc:  # noqa: BLE001
+            last_error = str(exc)[:200]
+        _time.sleep(8 + attempt * 8)
+    return {"matches": [], "acca": None, "url": URL, "status": "error", "error": last_error or "falha ao acessar Windrawwin"}
 
 
 def _scrape_once() -> dict:
