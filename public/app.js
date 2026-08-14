@@ -1,5 +1,8 @@
 "use strict";
 
+// nullish fallback (safe for older browsers; avoids ?? / ?. syntax)
+const nvl = (v, d) => (v === null || v === undefined ? d : v);
+
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -9,7 +12,7 @@ const el = (tag, cls, text) => {
 };
 
 const esc = (s) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) =>
+  String(nvl(s, "")).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const SRC_NAMES = {
@@ -133,9 +136,9 @@ function renderMatchCard(m) {
 
   if (m.live && m.live.corners && (m.live.corners.home != null || m.live.corners.away != null)) {
     const n = el("ul", "note-stats");
-    n.appendChild(el("li", "", `🔄 Escanteios: ${m.live.corners.home ?? "-"} x ${m.live.corners.away ?? "-"}`));
-    if (m.live.shots_on) n.appendChild(el("li", "", `🎯 Chutes no gol: ${m.live.shots_on.home ?? "-"} x ${m.live.shots_on.away ?? "-"}`));
-    if (m.live.possession) n.appendChild(el("li", "", `🧲 Posse: ${m.live.possession.home ?? "-"}% x ${m.live.possession.away ?? "-"}%`));
+    n.appendChild(el("li", "", `🔄 Escanteios: ${nvl(m.live.corners.home, "-")} x ${nvl(m.live.corners.away, "-")}`));
+    if (m.live.shots_on) n.appendChild(el("li", "", `🎯 Chutes no gol: ${nvl(m.live.shots_on.home, "-")} x ${nvl(m.live.shots_on.away, "-")}`));
+    if (m.live.possession) n.appendChild(el("li", "", `🧲 Posse: ${nvl(m.live.possession.home, "-")}% x ${nvl(m.live.possession.away, "-")}%`));
     card.appendChild(n);
   }
 
@@ -442,7 +445,7 @@ function renderLive(data) {
       nm.rel = "noopener";
       name.appendChild(nm);
       tr.appendChild(name);
-      tr.appendChild(el("td", "", `${m.score_home ?? "-"} x ${m.score_away ?? "-"}`));
+      tr.appendChild(el("td", "", `${nvl(m.score_home, "-")} x ${nvl(m.score_away, "-")}`));
       tr.appendChild(el("td", "", m.corners_home != null ? `${m.corners_home}-${m.corners_away}` : "-"));
       tr.appendChild(el("td", "", m.shots_on_home != null ? `${m.shots_on_home}-${m.shots_on_away}` : "-"));
       tr.appendChild(el("td", "", m.possession_home != null ? `${m.possession_home}%` : "-"));
@@ -468,7 +471,9 @@ function renderAll() {
   renderAcca(state);
   renderYoutube(state);
   renderLive(state);
-  $("#sourceChips").replaceChildren(sourceChips(state.predictions.sources));
+  const chips = $("#sourceChips");
+  while (chips.firstChild) chips.removeChild(chips.firstChild);
+  chips.appendChild(sourceChips(state.predictions.sources));
   $("#updatedAt").textContent = "atualizado " + fmtWhen(state.predictions.generated_at);
 }
 
