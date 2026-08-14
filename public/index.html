@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Freebuff Bets — Melhores apostas de futebol do dia</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⚽</span>
+      <div>
+        <h1>Freebuff <span class="accent">Bets</span></h1>
+        <p class="tagline">Melhores apostas e dicas de futebol do dia · agregador de fontes</p>
+      </div>
+    </div>
+    <div class="topmeta">
+      <div id="sourceChips" class="chips"></div>
+      <div class="refreshrow">
+        <span id="updatedAt" class="muted">—</span>
+        <button id="btnRefresh" class="btn" title="Atualizar agora">⟳ Atualizar</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="today">📋 Previsões de hoje</button>
+    <button class="tab" data-tab="acca">🎯 Acumuladora</button>
+    <button class="tab" data-tab="youtube">▶ YouTube Tips</button>
+    <button class="tab" data-tab="live">🔴 Ao Vivo</button>
+  </nav>
+
+  <main>
+    <section id="tab-today" class="tabpanel active">
+      <div id="todayContent" class="loading">Carregando previsões…</div>
+    </section>
+    <section id="tab-acca" class="tabpanel">
+      <div id="accaContent" class="loading">Calculando acumuladora…</div>
+    </section>
+    <section id="tab-youtube" class="tabpanel">
+      <div id="youtubeContent" class="loading">Buscando dicas no YouTube…</div>
+    </section>
+    <section id="tab-live" class="tabpanel">
+      <div id="liveContent" class="loading">Carregando jogos ao vivo…</div>
+    </section>
+  </main>
+
+  <footer class="disclaimer">
+    ⚠️ Apenas para fins informativos. Apostas envolvem risco — 18+. Jogue com responsabilidade.
+    As previsões são geradas a partir de fontes públicas e não garantem resultado. Odds sujeitas a mudança.
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Generated / local artifacts
+preview.html
+server.log
+.scratch/
+
+# Freebuff app internals
+.freebuff/
+
+# OS
+.DS_Store
+Thumbs.db
