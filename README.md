@@ -76,6 +76,15 @@ aposta de momento**:
 Cada dica traz probabilidade heurística e odd sugerida, com o placar, escanteios,
 chutes, xG e pressão ao vivo de cada jogo.
 
+A aba também mantém um **placar de Greens & Reds** das dicas de momento: cada dica
+emitida é registrada com um snapshot do estado do jogo e, quando a partida termina
+(status FT com placar/escanteios finais do SokkerPro), é liquidada como **✅ GREEN**
+(acertou) ou **❌ RED** (errou), com taxa de acerto acumulada do dia.
+
+Os **tempos dos jogos são atualizados em tempo real a partir da Robobet** (API
+pública): jogos marcados como `finished` são removidos automaticamente das listas e
+jogos ao vivo exibem o minuto atual (`time: "86'"`), além do placar ao vivo.
+
 ## Sinais ao vivo
 
 - ⚽ **Gol** — quando o placar muda entre atualizações.
