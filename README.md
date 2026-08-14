@@ -1,4 +1,4 @@
-# ⚽ Freebuff Bets
+# ⚽ ApostaRadar
 
 Site que agrega as **melhores apostas de futebol do dia**, monta uma **acumuladora confiável**
 (máx. 3 jogos, odd combinada ≤ 4.00), busca **dicas do dia no YouTube** e **monitora jogos ao

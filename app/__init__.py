@@ -1,1 +1,1 @@
-"""Freebuff Bets — agregador de apostas e previsões de futebol."""
+"""ApostaRadar — agregador de apostas e previsões de futebol."""

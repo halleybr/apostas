@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freebuff Bets — HTTP server (stdlib only).
+"""ApostaRadar — HTTP server (stdlib only).
 
 Endpoints:
   GET /api/predictions   aggregated daily predictions (all sources)
@@ -59,7 +59,7 @@ def _youtube():
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "FreebuffBets/1.0"
+    server_version = "ApostaRadar/1.0"
 
     # quiet the logs
     def log_message(self, fmt, *args):
@@ -137,7 +137,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"Freebuff Bets rodando em http://{HOST}:{PORT}")
+    print(f"ApostaRadar rodando em http://{HOST}:{PORT}")
     print(f"  /api/overview    -> previsões + acumuladora + youtube + ao vivo")
     try:
         srv.serve_forever()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a static, serverless version of Freebuff Bets for GitHub Pages.
+"""Build a static, serverless version of ApostaRadar for GitHub Pages.
 
 Runs the aggregation once (network), embeds the resulting snapshot into the
 frontend (``window.__SNAPSHOT__``), and writes the site to ``site/``:
