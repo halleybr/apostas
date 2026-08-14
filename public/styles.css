@@ -361,6 +361,29 @@ main { padding: 20px 24px 40px; max-width: 1280px; margin: 0 auto; }
 
 .empty { color: var(--muted); padding: 24px; text-align: center; }
 
+/* ---------- greens & reds ---------- */
+.badge-g, .badge-r, .badge-p, .badge-h {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge-g { background: rgba(34, 197, 94, .15); color: var(--green); }
+.badge-r { background: rgba(239, 68, 68, .15); color: var(--red); }
+.badge-p { background: rgba(245, 158, 11, .15); color: var(--yellow); }
+.badge-h { background: rgba(59, 130, 246, .15); color: var(--blue); }
+
+.gr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.gr-table th, .gr-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.gr-table th { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .4px; }
+.gr-table tr:hover td { background: rgba(59, 130, 246, .05); }
+.gr-table td.res { font-weight: 800; white-space: nowrap; }
+.gr-table td.res.g { color: var(--green); }
+.gr-table td.res.r { color: var(--red); }
+.gr-table td.res.p { color: var(--yellow); }
+
 /* ---------- footer ---------- */
 .disclaimer {
   max-width: 1280px;

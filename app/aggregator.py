@@ -187,6 +187,23 @@ class MatchBuilder:
         }
 
 
+FINISHED_STATUSES = {"finished", "ft", "aet", "pen", "cancelled", "canceled", "postponed", "abandoned"}
+
+
+def _parse_live_minute(raw) -> int | None:
+    """robobet exposes the live minute as a string like '86'' (trailing quote)."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if s.endswith("'"):
+        s = s[:-1]
+    try:
+        v = int(s)
+        return v if 0 <= v <= 130 else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _merge_into(match: MatchBuilder, match_obj: dict, source: str, key: str) -> None:
     """Fold a source match into the builder, filling identity + live info."""
     match.sources_present.add(source)
@@ -194,8 +211,19 @@ def _merge_into(match: MatchBuilder, match_obj: dict, source: str, key: str) -> 
         match.start_time = match_obj["start_time"]
     if not match.status and match_obj.get("status"):
         match.status = match_obj["status"]
+    # robobet 'finished' -> canonical FT
+    if str(match_obj.get("status") or "").lower() in FINISHED_STATUSES:
+        match.status = "FT"
+        match.isLive = False
     if match_obj.get("isLive"):
         match.isLive = True
+    if "minute" not in match.live and source == "robobet":
+        minute = _parse_live_minute(match_obj.get("time"))
+        if minute:
+            match.live["minute"] = minute
+    if match_obj.get("time") and str(match_obj.get("time")).upper() in ("FT", "AET", "PEN"):
+        match.status = str(match_obj.get("time")).upper()
+        match.isLive = False
     if not match.scores:
         sh, sa = match_obj.get("score_home"), match_obj.get("score_away")
         if sh is None:

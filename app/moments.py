@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime
 import threading
 
+from app.normalize import match_teams
 from app.scrapers import sokkerpro
 from app.fetch import FetchError
 
@@ -27,6 +28,104 @@ XG_REMAINING_HIGH = 0.35
 _lock = threading.Lock()
 _cache: dict[str, object] = {}
 
+# --- greens/reds tracking -------------------------------------------------
+# Every emitted moment tip is recorded with a snapshot of the live state;
+# when the match shows up as FT (final score/corners), the tip is settled
+# as green (won) or red (lost) and exposed through ``results``.
+_tips_lock = threading.Lock()
+_tips: list[dict] = []
+MAX_TIPS = 400
+
+
+def _tip_key(home: str, away: str, tipo: str) -> str:
+    return f"{home}|{away}|{tipo}"
+
+
+def _record_tips(games: list[dict]) -> None:
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with _tips_lock:
+        for g in games:
+            for t in g.get("tips") or []:
+                key = _tip_key(g["home"], g["away"], t.get("tipo", ""))
+                if any(e["result"] == "pending" and e["key"] == key for e in _tips):
+                    continue  # already watching this live tip
+                _tips.append({
+                    "key": key,
+                    "home": g["home"],
+                    "away": g["away"],
+                    "league": g.get("league", ""),
+                    "minute": g.get("minute"),
+                    "tipo": t.get("tipo"),
+                    "dica": t.get("dica"),
+                    "odd": t.get("odd_sugerida"),
+                    "prob": t.get("probabilidade"),
+                    "nivel": t.get("nivel"),
+                    "emitted_at": now,
+                    "snapshot": {
+                        "goals": _i(g.get("score_home")) + _i(g.get("score_away")),
+                        "corners": _i(g.get("corners", {}).get("home")) + _i(g.get("corners", {}).get("away")),
+                        "score_home": _i(g.get("score_home")),
+                        "score_away": _i(g.get("score_away")),
+                    },
+                    "result": "pending",
+                    "settled_at": None,
+                    "final": None,
+                })
+        if len(_tips) > MAX_TIPS:
+            del _tips[: len(_tips) - MAX_TIPS]
+
+
+def _settle_tips(ft_matches: list[dict]) -> None:
+    """Resolve pending tips against finished matches (final score/corners)."""
+    if not ft_matches:
+        return
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with _tips_lock:
+        for e in _tips:
+            if e["result"] != "pending":
+                continue
+            for m in ft_matches:
+                if not match_teams(e["home"], e["away"], str(m.get("home") or ""), str(m.get("away") or "")):
+                    continue
+                sh, sa = _i(m.get("score_home")), _i(m.get("score_away"))
+                ch, ca = _i(m.get("corners_home")), _i(m.get("corners_away"))
+                goals, corners = sh + sa, ch + ca
+                snap = e["snapshot"]
+                result = None
+                if e["tipo"] == "escanteio":
+                    # missing corner data looks like 0-0 -> leave pending
+                    if corners == 0 and snap["corners"] > 0:
+                        break
+                    result = "green" if corners > snap["corners"] else "red"
+                elif e["tipo"] == "gol":
+                    result = "green" if goals > snap["goals"] else "red"
+                elif e["tipo"] == "btts":
+                    result = "green" if sh >= 1 and sa >= 1 else "red"
+                elif e["tipo"] == "total":
+                    result = "green" if goals >= 3 else "red"
+                if result:
+                    e["result"] = result
+                    e["settled_at"] = now
+                    e["final"] = {"score": f"{sh}-{sa}", "goals": goals, "corners": corners}
+                break
+
+
+def _results() -> dict:
+    with _tips_lock:
+        items = [{k: e[k] for k in ("home", "away", "league", "minute", "tipo", "dica", "odd",
+                                     "prob", "nivel", "emitted_at", "result", "settled_at", "final")}
+                 for e in reversed(_tips[-80:])]
+        greens = sum(1 for e in _tips if e["result"] == "green")
+        reds = sum(1 for e in _tips if e["result"] == "red")
+        pending = sum(1 for e in _tips if e["result"] == "pending")
+    resolved = greens + reds
+    return {
+        "items": items,
+        "greens": greens,
+        "reds": reds,
+        "pending": pending,
+        "hit_rate": round(100 * greens / resolved) if resolved else None,
+    }
 
 def _f(v):
     try:
@@ -213,7 +312,9 @@ def get_moments(ttl: float = 45.0) -> dict:
 
     try:
         sk = sokkerpro.scrape(ttl=ttl)
-        live = [m for m in sk.get("matches", []) if m.get("isLive")]
+        all_matches = sk.get("matches", [])
+        live = [m for m in all_matches if m.get("isLive")]
+        ft = [m for m in all_matches if str(m.get("status") or "").upper() in ("FT", "AET", "PEN")]
     except (FetchError, Exception) as exc:  # noqa: BLE001
         value = {"games": [], "error": str(exc)[:200], "refreshed_at": now.isoformat()}
         with _lock:
@@ -260,8 +361,11 @@ def get_moments(ttl: float = 45.0) -> dict:
         })
 
     games.sort(key=lambda g: -g["agitation"]["score"])
+    _record_tips(games)
+    _settle_tips(ft)
     value = {
         "games": games,
+        "results": _results(),
         "error": None,
         "refreshed_at": now.isoformat(),
     }

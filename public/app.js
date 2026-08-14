@@ -562,6 +562,62 @@ function momentTip(t) {
   return row;
 }
 
+function snapshotAgeMin(refIso) {
+  if (!refIso) return 0;
+  const d = new Date(refIso);
+  if (isNaN(d)) return 0;
+  return Math.max(0, (Date.now() - d.getTime()) / 60000);
+}
+
+// a moment game is "finished" when its snapshot reports a final status or the
+// estimated minute (snapshot minute + snapshot age) is past the match end.
+function momentFinished(g, ageMin) {
+  if (isFinished(g)) return true;
+  const st = String(g.status || "").toUpperCase();
+  if (!["1ST", "2ND", "HT", "ET", "PEN", "BT"].includes(st)) return false;
+  const minute = parseInt(g.minute || "0", 10) || 0;
+  const est = minute + (ageMin || 0);
+  const limit = minute >= 90 ? 122 : 108;
+  return est > limit;
+}
+
+function renderMomentsResults(res) {
+  if (!res || !res.items || !res.items.length) return null;
+  const panel = el("div", "panel");
+  const head = el("div", "panel-head");
+  head.appendChild(el("h2", "", "🎯 Greens & Reds das dicas do momento"));
+  const stats = el("div", "sub");
+  stats.appendChild(el("span", "badge-g", `✅ ${res.greens} green${res.greens === 1 ? "" : "s"}`));
+  stats.appendChild(el("span", "badge-r", `❌ ${res.reds} red${res.reds === 1 ? "" : "s"}`));
+  stats.appendChild(el("span", "badge-p", `⏳ ${res.pending} pendentes`));
+  if (res.hit_rate != null) stats.appendChild(el("span", "badge-h", `🎯 acerto ${res.hit_rate}%`));
+  head.appendChild(stats);
+  panel.appendChild(head);
+
+  const tbl = el("table", "gr-table");
+  const thead = el("thead");
+  const trh = el("tr");
+  ["Hora", "Jogo", "Dica", "Odd", "Resultado"].forEach((h) => trh.appendChild(el("th", "", h)));
+  thead.appendChild(trh);
+  tbl.appendChild(thead);
+  const tbody = el("tbody");
+  res.items.slice(0, 30).forEach((t) => {
+    const tr = el("tr");
+    tr.appendChild(el("td", "", esc(fmtTime(t.emitted_at))));
+    tr.appendChild(el("td", "", `${esc(t.home)} x ${esc(t.away)}${t.final ? ` · <span class="muted">final ${esc(t.final.score)}</span>` : ""}`));
+    const dica = el("td");
+    dica.innerHTML = `${esc(t.dica)} <span class="muted">(${esc(t.tipo || "")} · prob ${nvl(t.prob, "-")}%)</span>`;
+    tr.appendChild(dica);
+    tr.appendChild(el("td", "", t.odd ? Number(t.odd).toFixed(2) : "-"));
+    tr.appendChild(el("td", "res " + (t.result === "green" ? "g" : t.result === "red" ? "r" : "p"),
+      t.result === "green" ? "✅ GREEN" : t.result === "red" ? "❌ RED" : "⏳ pendente"));
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  panel.appendChild(tbl);
+  return panel;
+}
+
 function renderMoments(data) {
   const box = $("#momentsContent");
   box.innerHTML = "";
@@ -571,18 +627,25 @@ function renderMoments(data) {
     return;
   }
 
+  const ageMin = snapshotAgeMin(m.refreshed_at);
+  const games = (m.games || []).filter((g) => !momentFinished(g, ageMin));
+  const dropped = (m.games || []).length - games.length;
+
   const panel = el("div", "panel");
   const head = el("div", "panel-head");
   head.appendChild(el("h2", "", "⚡ Melhores do momento — jogos ao vivo agitados"));
   head.appendChild(el("div", "sub",
-    `atualizado ${fmtWhen(m.refreshed_at)} · ${m.games.length} jogos com ritmo forte (pressão, chutes, escanteios, xG)`));
+    `atualizado ${fmtWhen(m.refreshed_at)} · ${games.length} jogos com ritmo forte (pressão, chutes, escanteios, xG)${dropped ? ` · ${dropped} encerrada(s) removida(s)` : ""}`));
   panel.appendChild(head);
   box.appendChild(panel);
 
+  const resPanel = renderMomentsResults(m.results);
+  if (resPanel) box.appendChild(resPanel);
+
   if (m.error) box.appendChild(el("div", "errorbox", `Erro no feed ao vivo: ${esc(m.error)}`));
 
-  const withTips = m.games.filter((g) => g.tips && g.tips.length);
-  const others = m.games.filter((g) => !g.tips || !g.tips.length);
+  const withTips = games.filter((g) => g.tips && g.tips.length);
+  const others = games.filter((g) => !g.tips || !g.tips.length);
 
   const renderGame = (g) => {
     const card = el("div", "match-card moment-card");
@@ -636,7 +699,7 @@ function renderMoments(data) {
     others.slice(0, 6).forEach((g) => g2.appendChild(renderGame(g)));
     box.appendChild(g2);
   }
-  if (!m.games.length) {
+  if (!games.length) {
     box.appendChild(el("div", "empty", "Nenhum jogo agitado no momento. Os jogos aparecem quando há pressão, chutes e escanteios em andamento."));
   }
 }
