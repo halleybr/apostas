@@ -5,6 +5,7 @@ __pycache__/
 
 # Generated / local artifacts
 preview.html
+site/
 server.log
 .scratch/
 
