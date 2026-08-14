@@ -15,7 +15,16 @@ import datetime
 import threading
 
 from app.normalize import match_teams, normalize_name
-from app.scrapers import aiscore, bettingexpert, robobet, sokkerpro, windrawwin
+from app.scrapers import (
+    aiscore,
+    bettingexpert,
+    betrush,
+    oddsscanner,
+    predictz,
+    robobet,
+    sokkerpro,
+    windrawwin,
+)
 from app.fetch import FetchError
 
 # canonical selection codes and their pt-BR labels
@@ -61,9 +70,13 @@ def _run_scrapers():
         "windrawwin": windrawwin.scrape,
         "bettingexpert": bettingexpert.scrape,
         "aiscore": aiscore.scrape,
+        "predictz": predictz.scrape,
+        "betrush": lambda: betrush.scrape("betrush"),
+        "tipgol": lambda: betrush.scrape("tipgol"),
+        "oddsscanner": oddsscanner.scrape,
     }
     results: dict[str, dict] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=9) as ex:
         futs = {name: ex.submit(fn) for name, fn in jobs.items()}
         for name, fut in futs.items():
             try:
@@ -319,6 +332,63 @@ def _add_windrawwin(match: MatchBuilder, ww: dict, key: str) -> None:
     match.live.setdefault("ww_stats", ww.get("stats"))
 
 
+# --- PredictZ (1X2 predictions + odds + bet365 refs) ---------------------
+def _add_predictz(match: MatchBuilder, pz: dict, key: str) -> None:
+    _merge_into(match, pz, "predictz", key)
+    if not match.bet365_url and pz.get("bet_url"):
+        match.bet365_url = pz["bet_url"]
+    if not match.ww_tip_url and pz.get("tip_url"):
+        match.ww_tip_url = pz["tip_url"]
+    odds = pz.get("odds") or {}
+    for wt, code in WW_TYPE.items():
+        o = odds.get(wt)
+        if o:
+            match.sel(code).add("predictz", odd=o)
+    pred = pz.get("prediction") or {}
+    if pred.get("code"):
+        match.sel(pred["code"]).add("predictz", agree=True, extra=f"PredictZ: {pred.get('score')}")
+    if pred.get("score"):
+        match.sel("score_pred").add("predictz", agree=False, extra=pred["score"])
+    match.live.setdefault("pz_form", {"home": pz.get("form_home"), "away": pz.get("form_away")})
+
+
+# --- Betrush / TipGol (tipster picks, free text) --------------------------
+def _add_tipster(match: MatchBuilder, tp: dict, key: str, source: str) -> None:
+    _merge_into(match, tp, source, key)
+    market = tp.get("market")
+    odd = tp.get("odd")
+    code = None
+    if market == "1":
+        code = "1"
+    elif market == "2":
+        code = "2"
+    elif market == "X":
+        code = "X"
+    elif market == "over":
+        code = "over25"
+    elif market == "under":
+        code = "under25"
+    elif market == "btts_yes":
+        code = "btts_yes"
+    if code:
+        extra = f"{tp.get('pick')} @ {tp.get('bookmaker')}" if tp.get("bookmaker") else tp.get("pick")
+        prob = None
+        if odd:
+            prob = min(0.9, max(0.05, 1.0 / odd))
+        match.sel(code).add(source, odd=odd, prob=prob, agree=True, extra=extra)
+    if not match.url and tp.get("url"):
+        match.url = tp["url"]
+
+
+# --- OddsScanner (palpites/analysis posts for today) ----------------------
+def _add_oddsscanner(match: MatchBuilder, os_: dict, key: str) -> None:
+    _merge_into(match, os_, "oddsscanner", key)
+    if not match.url and os_.get("url"):
+        match.url = os_["url"]
+    if os_.get("title"):
+        match.sel("analysis").add("oddsscanner", agree=False, extra=os_["title"])
+
+
 # --------------------------------------------------------------------------
 # main aggregation
 # --------------------------------------------------------------------------
@@ -368,6 +438,29 @@ def aggregate() -> dict:
         for m in ww_doc.get("matches", []):
             b = find_existing(m["home"], m["away"]) or get_builder(m["home"], m["away"], m.get("league") or "")
             _add_windrawwin(b, m, "windrawwin")
+
+    # --- PredictZ matches ---
+    pz_doc = raw.get("predictz") or {}
+    if pz_doc.get("status") != "error":
+        for m in pz_doc.get("matches", []):
+            b = find_existing(m["home"], m["away"]) or get_builder(m["home"], m["away"], m.get("league") or "")
+            _add_predictz(b, m, "predictz")
+
+    # --- Betrush / TipGol picks ---
+    for src in ("betrush", "tipgol"):
+        doc = raw.get(src) or {}
+        if doc.get("status") == "error":
+            continue
+        for p in doc.get("matches", []):
+            b = find_existing(p["home"], p["away"]) or get_builder(p["home"], p["away"], p.get("league") or "")
+            _add_tipster(b, p, src, src)
+
+    # --- OddsScanner palpites ---
+    os_doc = raw.get("oddsscanner") or {}
+    if os_doc.get("status") != "error":
+        for m in os_doc.get("matches", []):
+            b = find_existing(m["home"], m["away"]) or get_builder(m["home"], m["away"], m.get("league") or "")
+            _add_oddsscanner(b, m, "oddsscanner")
 
     matches = [b.to_dict() for b in builders.values()]
     matches = [m for m in matches if m is not None]

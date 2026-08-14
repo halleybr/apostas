@@ -22,6 +22,10 @@ const SRC_NAMES = {
   windrawwin: "Windrawwin",
   bettingexpert: "BettingExpert",
   aiscore: "AiScore",
+  predictz: "PredictZ",
+  betrush: "Betrush",
+  tipgol: "TipGol",
+  oddsscanner: "OddsScanner",
 };
 
 let state = null;
@@ -214,7 +218,7 @@ function renderToday(data) {
   const acca = data.accumulator.recommended;
   const panel = el("div", "panel");
   const head = el("div", "panel-head");
-  head.appendChild(el("h2", "", "📋 Previsões de hoje — melhores seleções por jogo"));
+  head.appendChild(el("h2", "", "📋 Melhores do Dia — jogos e seleções de hoje"));
 
   const all = data.predictions.matches.filter((m) => !isFinished(m));
   const ageMin = liveSnapshotAgeMin();

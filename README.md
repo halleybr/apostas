@@ -13,6 +13,10 @@ Construído em **Python puro (stdlib) — zero dependências**. Roda em qualquer
 | [Robobet](https://robobet.app) | API JSON pública: picks com probabilidade/confiança, EV por mercado, oportunidades de escanteios, histórico de acerto (70%+) | ✅ completa |
 | [SokkerPro](https://sokkerpro.com) | API JSON pública: jogos do dia, placar ao vivo, escanteios, xG, chutes, posse, odds ao vivo e previsões por mercado | ✅ completa |
 | [Windrawwin](https://www.windrawwin.com/predictions/today/) | Previsões 1X2 / over-under / BTTS, forma dos times, estatísticas, odds e a acumuladora diária oficial do site | ✅ completa |
+| [PredictZ](https://www.predictz.com/predictions/) | Previsões 1X2 diárias com placar previsto, forma dos times, odds e refs bet365 | ✅ completa |
+| [Betrush](https://www.betrush.com/) | Picks de tipsters com odd, casa e tipster (plataforma Betrush) | ✅ completa |
+| [TipGol](https://www.tipgol.com/) | Picks de tipsters com odd, casa e tipster (mesma plataforma do Betrush, em espanhol) | ✅ completa |
+| [OddsScanner](https://oddsscanner.com/br/futebol) | Palpites de hoje (análises de jogos do dia em pt-BR); o grid de odds exige sessão | ⚠️ parcial |
 | [BettingExpert](https://www.bettingexpert.com/tips) | A lista de dicas é renderizada via JavaScript (server actions) — o site entrega links diretos e aviso | ⚠️ parcial |
 | [AiScore](https://www.aiscore.com) | API usa protobuf com IDs ofuscados (anti-bot) — o site entrega links diretos de placar/previsões | ⚠️ parcial |
 | YouTube | Dicas em vídeo do dia (parse de `ytInitialData`, sem API key) | ✅ |
@@ -48,7 +52,7 @@ Dados são cacheados em memória (previsões ~5 min, YouTube ~20 min, ao vivo ~4
    coletadas das fontes que opinam sobre ela.
 2. Cada seleção ganha um **índice de confiabilidade** que combina:
    - probabilidade média dos modelos (Robobet e SokkerPro);
-   - número de fontes concordando (acordo entre Robobet / SokkerPro / Windrawwin);
+   - número de fontes concordando (acordo entre Robobet / SokkerPro / Windrawwin / PredictZ / Betrush / TipGol);
    - picks oficiais da Robobet.
 3. Todas as combinações de **1 a 3 jogos** com odd entre **1.10 e 4.00** são enumeradas e
    ranqueadas por confiabilidade. São oferecidas 3 variantes:
@@ -72,7 +76,7 @@ server.py                 servidor HTTP + API
 app/fetch.py              fetch com cache, retry, descompressão gzip/deflate
 app/htmlparse.py          mini-parser de DOM (stdlib)
 app/normalize.py          normalização/fuzzy-match de nomes de times
-app/scrapers/             windrawwin, robobet, sokkerpro, bettingexpert, aiscore
+app/scrapers/             windrawwin, robobet, sokkerpro, predictz, betrush, oddsscanner, bettingexpert, aiscore
 app/aggregator.py         unificação das fontes + confiabilidade
 app/accumulator.py        montagem da acumuladora (≤3 jogos, odd ≤4.00)
 app/youtube.py            busca de dicas no YouTube

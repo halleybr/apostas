@@ -74,8 +74,10 @@ def build_accumulator(matches: list[dict]) -> dict:
     def score_combo(legs):
         odd = math.prod(l["odd"] for l in legs)
         rel = math.prod(l["reliability"] for l in legs) ** (1.0 / len(legs))
-        # small preference for real accumulators (2-3 legs) over singles
-        rel = rel * (1 + 0.04 * (len(legs) - 1))
+        # prefer real accumulators: the user asked for a 3-game ticket.
+        # modest boost per extra leg so a full 3-leg ticket wins when
+        # its average reliability is anywhere close to a single's.
+        rel = rel * (1 + 0.05 * (len(legs) - 1) + 0.03 * max(0, len(legs) - 2))
         avg_prob = sum(l["prob"] or 0 for l in legs) / len(legs) if legs else 0
         return rel, avg_prob
 
