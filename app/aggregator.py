@@ -197,6 +197,13 @@ def _parse_live_minute(raw) -> int | None:
     s = str(raw).strip()
     if s.endswith("'"):
         s = s[:-1]
+    if "+" in s:  # stoppage time, e.g. "45+2'"
+        try:
+            a, b = s.split("+", 1)
+            v = int(a) + int(b)
+            return v if 0 <= v <= 130 else None
+        except (TypeError, ValueError):
+            return None
     try:
         v = int(s)
         return v if 0 <= v <= 130 else None
@@ -327,9 +334,12 @@ def _add_sokkerpro(match: MatchBuilder, sk: dict, key: str) -> None:
         if k.startswith("over") and isinstance(d, dict):
             match.sel("corners_over").add("sokkerpro", odd=d.get("odd"), prob=(d.get("probabilidade") or 0) / 100,
                                           extra=f"média {d.get('media_total_escanteios')} cantos")
-    # live stats snapshot
+    # live stats snapshot — Robobet's real-time minute is the base (it is the
+    # primary spine); sokkerpro only fills the minute when Robobet has none
+    # (e.g. matches only present in the sokkerpro feed, or "HT" labels).
+    if not match.live.get("minute") and sk.get("minute") not in (None, ""):
+        match.live["minute"] = sk["minute"]
     match.live.update({
-        "minute": sk.get("minute"),
         "corners": {"home": sk.get("corners_home"), "away": sk.get("corners_away")},
         "shots_on": {"home": sk.get("shots_on_home"), "away": sk.get("shots_on_away")},
         "possession": {"home": sk.get("possession_home"), "away": sk.get("possession_away")},

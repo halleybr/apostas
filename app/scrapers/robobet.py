@@ -41,10 +41,17 @@ def _match_info(item: dict) -> dict:
 
 
 def scrape(ttl: float | None = None) -> dict:
+    """Scrape all Robobet feeds.
+
+    The ``events/today`` feed carries the real-time live state (status, minute,
+    score) — its TTL follows the ``ttl`` argument so live consumers can poll it
+    as fresh as they need (e.g. 45s), while the curated picks/corners/scoreboard
+    feeds keep the default, longer TTL.
+    """
     t = ttl if ttl is not None else TTL
     picks_doc = cached_fetch_json(f"{BASE}/opportunities/picks", t, headers=HEADERS)
     corners_doc = cached_fetch_json(f"{BASE}/opportunities/corners", TTL, headers=HEADERS)
-    events_doc = cached_fetch_json(f"{BASE}/events/today", TTL, headers=HEADERS)
+    events_doc = cached_fetch_json(f"{BASE}/events/today", t, headers=HEADERS)
     scoreboard_doc = cached_fetch_json(f"{BASE}/opportunities/scoreboard", TTL, headers=HEADERS)
 
     picks: list[dict] = []

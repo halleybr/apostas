@@ -87,6 +87,10 @@ jogos ao vivo exibem o minuto atual (`time: "86'"`), além do placar ao vivo.
 
 ## Sinais ao vivo
 
+Os jogos ao vivo são baseados na **Robobet** (`events/today`, polling ~45 s), que
+fornece status, minuto e placar em tempo real; as estatísticas (cantos, chutes, posse,
+xG, ataques perigosos) vêm do SokkerPro e são casadas por nome de time quando disponíveis.
+
 - ⚽ **Gol** — quando o placar muda entre atualizações.
 - 🚩 **Escanteio** — contagem sobe + ritmo (cantos/jogo projetado).
 - 📈 **Over 2.5 no caminho** — projeção de gols por ritmo.

@@ -514,7 +514,9 @@ function renderLive(data) {
     const tbody = el("tbody");
     for (const m of liveList) {
       const tr = el("tr");
-      tr.appendChild(el("td", "live", esc(String(m.minute || "")) + "'"));
+      const minuteStr = String(m.minute || "");
+      // "HT"/"ET" labels carry no trailing quote; numeric minutes do
+      tr.appendChild(el("td", "live", esc(/[a-z]/i.test(minuteStr) ? minuteStr : minuteStr + "'")));
       const name = el("td");
       const nm = m.url ? el("a", "", `${esc(m.home)} x ${esc(m.away)}`) : el("span", "", `${esc(m.home)} x ${esc(m.away)}`);
       if (m.url) nm.href = m.url;
